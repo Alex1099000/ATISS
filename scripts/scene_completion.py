@@ -20,15 +20,12 @@ import trimesh
 from training_utils import load_config
 from utils import floor_plan_from_scene, export_scene, \
     poll_specific_class, make_network_input, render_to_folder, \
-    render_scene_from_bbox_params
+    render_scene_from_bbox_params, create_scene
 
 from scene_synthesis.datasets import get_dataset_raw_and_encoded, \
     filter_function
 from scene_synthesis.datasets.threed_future_dataset import ThreedFutureDataset
 from scene_synthesis.networks import build_network
-
-from simple_3dviz import Scene
-
 
 def poll_objects(dataset, current_boxes, scene_id):
     """Show the objects in the current_scene and ask which ones to be
@@ -187,7 +184,7 @@ def main(argv):
     network.eval()
 
     # Create the scene and the behaviour list for simple-3dviz
-    scene = Scene(size=args.window_size)
+    scene = create_scene(size=args.window_size)
     scene.up_vector = args.up_vector
     scene.camera_target = args.camera_target
     scene.camera_position = args.camera_position

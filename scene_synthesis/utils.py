@@ -13,6 +13,31 @@ import trimesh
 from simple_3dviz.renderables.textured_mesh import Material, TexturedMesh
 
 
+_TEXTURE_CACHE = {}
+
+
+def read_texture_image(path):
+    if path not in _TEXTURE_CACHE:
+        _TEXTURE_CACHE[path] = np.ascontiguousarray(
+            Image.open(path).convert("RGBA")
+        )
+    return _TEXTURE_CACHE[path]
+
+
+def textured_material(path, **kwargs):
+    material = Material.with_texture_image(path, **kwargs)
+    material.texture = read_texture_image(path)
+    return material
+
+
+def set_renderable_texture(renderable, texture_path):
+    if hasattr(renderable, "material"):
+        renderable.material = textured_material(texture_path)
+    elif hasattr(renderable, "renderables"):
+        for child in renderable.renderables:
+            set_renderable_texture(child, texture_path)
+
+
 def get_textured_objects(bbox_params_t, objects_dataset, classes):
     # For each one of the boxes replace them with an object
     renderables = []
@@ -27,6 +52,7 @@ def get_textured_objects(bbox_params_t, objects_dataset, classes):
 
         # Load the furniture and scale it as it is given in the dataset
         raw_mesh = TexturedMesh.from_file(furniture.raw_model_path)
+        set_renderable_texture(raw_mesh, furniture.texture_image_path)
         raw_mesh.scale(furniture.scale)
 
         # Compute the centroid of the vertices in order to match the
@@ -53,8 +79,8 @@ def get_textured_objects(bbox_params_t, objects_dataset, classes):
         # Create a trimesh object for the same mesh in order to save
         # everything as a single scene
         tr_mesh = trimesh.load(furniture.raw_model_path, force="mesh")
-        tr_mesh.visual.material.image = Image.open(
-            furniture.texture_image_path
+        tr_mesh.visual.material.image = Image.fromarray(
+            read_texture_image(furniture.texture_image_path)
         )
         tr_mesh.vertices *= furniture.scale
         tr_mesh.vertices -= centroid

@@ -14,6 +14,7 @@ from PIL import Image
 from pyrr import Matrix44
 
 import trimesh
+import moderngl
 
 from simple_3dviz import Mesh, Scene
 from simple_3dviz.renderables.textured_mesh import Material, TexturedMesh
@@ -23,6 +24,24 @@ from simple_3dviz.behaviours.io import SaveFrames
 from simple_3dviz.utils import render as render_simple_3dviz
 
 from scene_synthesis.utils import get_textured_objects
+
+
+SUPPORTED_TEXTURE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+_TEXTURE_CACHE = {}
+
+
+def create_scene(size=(256, 256), background=(1, 1, 1, 1)):
+    if os.environ.get("DISPLAY") is not None:
+        return Scene(size=size, background=background)
+
+    create_standalone_context = moderngl.create_standalone_context
+    try:
+        moderngl.create_standalone_context = (
+            lambda **kwargs: create_standalone_context(backend="egl", **kwargs)
+        )
+        return Scene(size=size, background=background)
+    finally:
+        moderngl.create_standalone_context = create_standalone_context
 
 
 class DirLock(object):
@@ -85,15 +104,48 @@ def floor_plan_from_scene(
         )
     else:
         room_mask = None
+    floor_textures = collect_floor_textures(path_to_floor_plan_textures)
     # Also get a renderable for the floor plan
-    floor, tr_floor = get_floor_plan(
-        scene,
-        [
-            os.path.join(path_to_floor_plan_textures, fi)
-            for fi in os.listdir(path_to_floor_plan_textures)
-        ]
-    )
+    floor, tr_floor = get_floor_plan(scene, floor_textures)
     return [floor], [tr_floor], room_mask
+
+
+def collect_floor_textures(path_to_floor_plan_textures):
+    floor_textures = []
+    for dirpath, _, filenames in os.walk(path_to_floor_plan_textures):
+        for filename in filenames:
+            if os.path.splitext(filename)[1].lower() in SUPPORTED_TEXTURE_EXTENSIONS:
+                floor_textures.append(os.path.join(dirpath, filename))
+
+    if not floor_textures:
+        raise RuntimeError(
+            "No floor texture images found under {}".format(
+                path_to_floor_plan_textures
+            )
+        )
+    return floor_textures
+
+
+def read_texture_image(path):
+    if path not in _TEXTURE_CACHE:
+        _TEXTURE_CACHE[path] = np.ascontiguousarray(
+            Image.open(path).convert("RGBA")
+        )
+    return _TEXTURE_CACHE[path]
+
+
+def textured_material(path, **kwargs):
+    material = Material.with_texture_image(path, **kwargs)
+    material.texture = read_texture_image(path)
+    return material
+
+
+def set_renderable_texture(renderable, texture_path):
+    if hasattr(renderable, "material"):
+        renderable.material = textured_material(texture_path)
+    elif hasattr(renderable, "renderables"):
+        for child in renderable.renderables:
+            set_renderable_texture(child, texture_path)
 
 
 def get_floor_plan(scene, floor_textures):
@@ -110,7 +162,7 @@ def get_floor_plan(scene, floor_textures):
         vertices=vertices,
         uv=uv,
         faces=faces,
-        material=Material.with_texture_image(texture)
+        material=textured_material(texture)
     )
 
     tr_floor = trimesh.Trimesh(
@@ -119,7 +171,7 @@ def get_floor_plan(scene, floor_textures):
     tr_floor.visual = trimesh.visual.TextureVisuals(
         uv=np.copy(uv),
         material=trimesh.visual.material.SimpleMaterial(
-            image=Image.open(texture)
+            image=Image.fromarray(read_texture_image(texture))
         )
     )
 
@@ -136,6 +188,7 @@ def get_textured_objects_in_scene(scene, ignore_lamps=False):
 
         # Load the furniture and scale it as it is given in the dataset
         raw_mesh = TexturedMesh.from_file(model_path)
+        set_renderable_texture(raw_mesh, furniture.texture_image_path)
         raw_mesh.scale(furniture.scale)
 
         # Compute the centroid of the vertices in order to match the
@@ -185,7 +238,7 @@ def render(scene, renderables, color, mode, frame_path=None):
 
 def scene_from_args(args):
     # Create the scene and the behaviour list for simple-3dviz
-    scene = Scene(size=args.window_size, background=args.background)
+    scene = create_scene(size=args.window_size, background=args.background)
     scene.up_vector = args.up_vector
     scene.camera_target = args.camera_target
     scene.camera_position = args.camera_position

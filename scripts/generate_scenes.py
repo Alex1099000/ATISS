@@ -16,7 +16,7 @@ import numpy as np
 import torch
 
 from training_utils import load_config
-from utils import floor_plan_from_scene, export_scene
+from utils import floor_plan_from_scene, export_scene, create_scene
 
 from scene_synthesis.datasets import filter_function, \
     get_dataset_raw_and_encoded
@@ -24,7 +24,6 @@ from scene_synthesis.datasets.threed_future_dataset import ThreedFutureDataset
 from scene_synthesis.networks import build_network
 from scene_synthesis.utils import get_textured_objects
 
-from simple_3dviz import Scene
 from simple_3dviz.window import show
 from simple_3dviz.behaviours.keyboard import SnapshotOnKey, SortTriangles
 from simple_3dviz.behaviours.misc import LightToCamera
@@ -174,7 +173,7 @@ def main(argv):
     network.eval()
 
     # Create the scene and the behaviour list for simple-3dviz
-    scene = Scene(size=args.window_size)
+    scene = create_scene(size=args.window_size)
     scene.up_vector = args.up_vector
     scene.camera_target = args.camera_target
     scene.camera_position = args.camera_position

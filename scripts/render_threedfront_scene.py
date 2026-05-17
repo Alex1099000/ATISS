@@ -19,14 +19,13 @@ import trimesh
 
 from scene_synthesis.datasets.threed_front import ThreedFront
 
-from simple_3dviz import Scene
 from simple_3dviz.behaviours.keyboard import SnapshotOnKey
 from simple_3dviz.behaviours.io import SaveFrames
 from simple_3dviz.renderables.textured_mesh import TexturedMesh
 from simple_3dviz.utils import render
 from simple_3dviz.window import show
 
-from utils import floor_plan_from_scene, export_scene
+from utils import floor_plan_from_scene, export_scene, create_scene
 
 
 def scene_init(mesh, up_vector, camera_position, camera_target, background):
@@ -147,7 +146,7 @@ def main(argv):
         os.makedirs(args.output_directory)
 
     # Create the scene and the behaviour list for simple-3dviz
-    scene = Scene(size=args.window_size)
+    scene = create_scene(size=args.window_size)
     if args.with_orthographic_projection:
         scene.camera_matrix = pyrr.Matrix44.orthogonal_projection(
             left=-3.1, right=3.1, bottom=-3.1, top=3.1, near=0.1, far=1000
