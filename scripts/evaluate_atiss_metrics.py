@@ -381,7 +381,8 @@ def compute_fid(processed_dataset_directory, annotation_file, synthesized_direct
         scores.append(float(fid.compute_fid(
             real_directory,
             fake_directory,
-            device=torch.device("cpu")
+            device=torch.device("cpu"),
+            use_dataparallel=False
         )))
 
     return {
