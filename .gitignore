@@ -10,8 +10,8 @@
 *.bz2
 *pyc
 *.swp
-
 *.so
+*.pdf
 build/
 
 *.egg-info
@@ -24,3 +24,6 @@ output/
 
 #VS Code settings
 .vscode/
+
+checkpoints/*
+outputs/*
