@@ -11,6 +11,8 @@ from torch.utils.data import DataLoader, IterableDataset
 
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import Callback
+from lightning.pytorch.callbacks.progress import TQDMProgressBar
+from lightning.pytorch.callbacks.progress.tqdm_progress import Tqdm
 
 from training_utils import id_generator, save_experiment_params, load_config
 
@@ -175,6 +177,8 @@ class ATISSLightningModule(pl.LightningModule):
         self._optimizer = optimizer
         self.automatic_optimization = False
         self._run_validation = False
+        self._train_metrics = None
+        self._val_metrics = None
 
     def forward(self, sample):
         return self.network(sample)
@@ -195,11 +199,7 @@ class ATISSLightningModule(pl.LightningModule):
         self.manual_backward(loss)
         optimizer.step()
 
-        StatsLogger.instance().print_progress(
-            self.legacy_epoch+1,
-            batch_idx+1,
-            loss.item()
-        )
+        self._update_epoch_metrics("_train_metrics", loss.item())
         self.log(
             "train_loss",
             loss,
@@ -214,12 +214,36 @@ class ATISSLightningModule(pl.LightningModule):
     def legacy_epoch(self):
         return self.start_epoch + self.current_epoch
 
+    def _update_epoch_metrics(self, metrics_attr, loss):
+        metrics = getattr(self, metrics_attr)
+        if metrics is None:
+            metrics = {
+                "loss": 0.0,
+                "count": 0,
+                "values": {},
+                "last_values": {}
+            }
+            setattr(self, metrics_attr, metrics)
+
+        metrics["loss"] += loss
+        metrics["count"] += 1
+        for key, value in StatsLogger.instance()._values.items():
+            previous = metrics["last_values"].get(key, 0.0)
+            metrics["values"].setdefault(key, 0.0)
+            metrics["values"][key] += value._value - previous
+            metrics["last_values"][key] = value._value
+
+    def pop_epoch_metrics(self, metrics_attr):
+        metrics = getattr(self, metrics_attr)
+        setattr(self, metrics_attr, None)
+        return metrics
+
     def validation_step(self, batch, batch_idx):
         if not self._run_validation:
             return None
         prediction = self.network(batch)
         loss = prediction.reconstruction_loss(batch, batch["lengths"])
-        StatsLogger.instance().print_progress(-1, batch_idx+1, loss.item())
+        self._update_epoch_metrics("_val_metrics", loss.item())
         self.log(
             "val_loss",
             loss,
@@ -238,6 +262,31 @@ class LegacyATISSCallback(Callback):
         self.save_every = save_every
         self.val_every = val_every
 
+    @staticmethod
+    def format_metrics(prefix, epoch, metrics):
+        if metrics is None or metrics["count"] == 0:
+            return None
+
+        count = metrics["count"]
+        msg = "{} epoch: {} - loss: {:.5f}".format(
+            prefix,
+            epoch,
+            metrics["loss"] / count
+        )
+        for key, value in sorted(metrics["values"].items()):
+            msg += " - {}: {:.5f}".format(key, value / count)
+        return msg
+
+    @staticmethod
+    def write_summary(message):
+        if message is None:
+            return
+
+        print(message, flush=True)
+        for f in StatsLogger.instance()._output_files:
+            if not f.isatty():
+                print(message, flush=True, file=f)
+
     def on_train_epoch_end(self, trainer, pl_module):
         epoch = pl_module.legacy_epoch
         if (epoch % self.save_every) == 0:
@@ -248,6 +297,13 @@ class LegacyATISSCallback(Callback):
                 optimizer,
                 self.experiment_directory,
             )
+        self.write_summary(
+            self.format_metrics(
+                "train",
+                epoch+1,
+                pl_module.pop_epoch_metrics("_train_metrics")
+            )
+        )
         StatsLogger.instance().clear()
 
     def on_train_epoch_start(self, trainer, pl_module):
@@ -263,8 +319,75 @@ class LegacyATISSCallback(Callback):
     def on_validation_epoch_end(self, trainer, pl_module):
         if trainer.sanity_checking or not pl_module._run_validation:
             return
+        self.write_summary(
+            self.format_metrics(
+                "val",
+                pl_module.legacy_epoch+1,
+                pl_module.pop_epoch_metrics("_val_metrics")
+            )
+        )
         StatsLogger.instance().clear()
         print("====> Validation Epoch ====>")
+
+
+class EpochTQDMProgressBar(TQDMProgressBar):
+    def __init__(self, start_epoch=0, *args, **kwargs):
+        super().__init__(*args, leave=False, **kwargs)
+        self.start_epoch = start_epoch
+        self.epoch_progress_bar = None
+
+    def get_metrics(self, trainer, pl_module):
+        metrics = super().get_metrics(trainer, pl_module)
+        return metrics
+
+    def init_train_tqdm(self):
+        return Tqdm(
+            desc="Batches",
+            position=1,
+            disable=self.is_disabled,
+            leave=False,
+            dynamic_ncols=True,
+            file=sys.stdout,
+            smoothing=0,
+            bar_format=self.BAR_FORMAT,
+        )
+
+    def init_epoch_tqdm(self, trainer):
+        return Tqdm(
+            desc="Epochs",
+            total=trainer.max_epochs,
+            initial=trainer.current_epoch,
+            position=0,
+            disable=self.is_disabled,
+            leave=True,
+            dynamic_ncols=True,
+            file=sys.stdout,
+            smoothing=0,
+            bar_format=self.BAR_FORMAT,
+        )
+
+    def on_train_start(self, trainer, pl_module):
+        self.epoch_progress_bar = self.init_epoch_tqdm(trainer)
+        self.train_progress_bar = self.init_train_tqdm()
+
+    def on_train_epoch_start(self, trainer, pl_module):
+        super().on_train_epoch_start(trainer, pl_module)
+        current_epoch = self.start_epoch + trainer.current_epoch + 1
+        total_epochs = self.start_epoch + trainer.max_epochs
+        self.train_progress_bar.set_description(
+            "Batches epoch {}/{}".format(current_epoch, total_epochs)
+        )
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        super().on_train_epoch_end(trainer, pl_module)
+        if self.epoch_progress_bar is not None:
+            self.epoch_progress_bar.update(1)
+            self.epoch_progress_bar.set_postfix(self.get_metrics(trainer, pl_module))
+
+    def on_train_end(self, trainer, pl_module):
+        super().on_train_end(trainer, pl_module)
+        if self.epoch_progress_bar is not None:
+            self.epoch_progress_bar.close()
 
 
 def main(argv):
@@ -406,7 +529,8 @@ def main(argv):
         logger=False,
         enable_model_summary=False,
         callbacks=[
-            LegacyATISSCallback(experiment_directory, save_every, val_every)
+            LegacyATISSCallback(experiment_directory, save_every, val_every),
+            EpochTQDMProgressBar(start_epoch=args.continue_from_epoch)
         ]
     )
     trainer.fit(
