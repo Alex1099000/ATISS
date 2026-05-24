@@ -23,7 +23,6 @@ from simple_3dviz.behaviours.keyboard import SnapshotOnKey
 from simple_3dviz.behaviours.io import SaveFrames
 from simple_3dviz.renderables.textured_mesh import TexturedMesh
 from simple_3dviz.utils import render
-from simple_3dviz.window import show
 
 from utils import floor_plan_from_scene, export_scene, create_scene
 
@@ -240,6 +239,7 @@ def main(argv):
                     scene=scene
                 )
             else:
+                from simple_3dviz.window import show
                 show(
                     renderables,
                     behaviours=behaviours+[SnapshotOnKey()],

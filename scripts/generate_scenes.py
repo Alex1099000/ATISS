@@ -14,6 +14,7 @@ import sys
 
 import numpy as np
 import torch
+from pyrr import Matrix44
 
 from training_utils import load_config
 from utils import floor_plan_from_scene, export_scene, create_scene
@@ -24,7 +25,6 @@ from scene_synthesis.datasets.threed_future_dataset import ThreedFutureDataset
 from scene_synthesis.networks import build_network
 from scene_synthesis.utils import get_textured_objects
 
-from simple_3dviz.window import show
 from simple_3dviz.behaviours.keyboard import SnapshotOnKey, SortTriangles
 from simple_3dviz.behaviours.misc import LightToCamera
 from simple_3dviz.behaviours.movements import CameraTrajectory
@@ -121,6 +121,17 @@ def main(argv):
         default=None,
         help="The scene id to be used for conditioning"
     )
+    parser.add_argument(
+        "--with_orthographic_projection",
+        action="store_true",
+        help="Render a top-down orthographic view"
+    )
+    parser.add_argument(
+        "--room_side",
+        type=float,
+        default=3.1,
+        help="Half side length for top-down orthographic rendering"
+    )
 
     args = parser.parse_args(argv)
 
@@ -178,6 +189,12 @@ def main(argv):
     scene.camera_target = args.camera_target
     scene.camera_position = args.camera_position
     scene.light = args.camera_position
+    if args.with_orthographic_projection:
+        scene.camera_matrix = Matrix44.orthogonal_projection(
+            left=-args.room_side, right=args.room_side,
+            bottom=args.room_side, top=-args.room_side,
+            near=0.1, far=6
+        )
 
     given_scene_id = None
     if args.scene_id:
@@ -223,8 +240,8 @@ def main(argv):
                 scene_idx,
                 i
             )
+            scene.light = args.camera_position
             behaviours = [
-                LightToCamera(),
                 SaveFrames(path_to_image+".png", 1)
             ]
             if args.with_rotating_camera:
@@ -252,6 +269,7 @@ def main(argv):
                 scene=scene
             )
         else:
+            from simple_3dviz.window import show
             show(
                 renderables,
                 behaviours=[LightToCamera(), SnapshotOnKey(), SortTriangles()],

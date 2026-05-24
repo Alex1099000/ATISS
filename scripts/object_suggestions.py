@@ -29,7 +29,6 @@ from scene_synthesis.networks import build_network
 from scene_synthesis.utils import get_textured_objects
 
 from simple_3dviz import Mesh
-from simple_3dviz.window import show
 from simple_3dviz.behaviours.misc import LightToCamera
 from simple_3dviz.behaviours.io import SaveFrames
 from simple_3dviz.utils import render
