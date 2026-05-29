@@ -1,0 +1,3 @@
+checkpoint_path: ${model.checkpoint}
+output_path: artifacts/onnx/atiss.onnx
+opset: 17

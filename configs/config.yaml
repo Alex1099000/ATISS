@@ -1,0 +1,14 @@
+defaults:
+  - data: bedrooms
+  - preprocess: default
+  - model: atiss
+  - train: default
+  - eval: default
+  - export: onnx
+  - export/tensorrt: default
+  - serve: mlflow
+  - _self_
+
+project:
+  name: furniture-layout-generation
+  root: .

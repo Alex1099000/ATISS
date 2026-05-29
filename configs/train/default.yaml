@@ -1,0 +1,10 @@
+config_file: ${data.atiss_config}
+output_dir: checkpoints
+experiment_tag: bedrooms_lightning
+n_processes: 0
+seed: 27
+with_wandb_logger: false
+with_mlflow_logger: true
+mlflow_tracking_uri: http://127.0.0.1:8080
+mlflow_experiment_name: furniture-layout-generation
+pull_data: true

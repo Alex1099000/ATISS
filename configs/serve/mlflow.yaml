@@ -1,0 +1,5 @@
+tracking_uri: http://127.0.0.1:8080
+experiment_name: furniture-layout-generation
+model_uri: models:/furniture-layout-generation/latest
+host: 127.0.0.1
+port: 5001

@@ -1,0 +1,4 @@
+type: autoregressive_transformer
+checkpoint: checkpoints/bedrooms_lightning/model_00300
+output_dir: checkpoints/bedrooms_lightning
+experiment_tag: bedrooms_lightning

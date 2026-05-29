@@ -1,0 +1,10 @@
+output_dir: outputs/eval_model_00100_all
+n_synthesized_scenes: 1000
+skip_classifier: true
+fid_repeats: 10
+classifier_repeats: 10
+classifier_epochs: 10
+classifier_batch_size: 256
+classifier_num_workers: 0
+window_size: 256,256
+room_side: 3.1
