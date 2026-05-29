@@ -1,17 +1,17 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
-from collections import Counter, OrderedDict
-from functools import lru_cache
-import numpy as np
 import json
 import os
+from collections import Counter, OrderedDict
+from functools import lru_cache
 
+import numpy as np
 from PIL import Image
 
 from .common import BaseDataset
@@ -22,10 +22,11 @@ from .utils import parse_threed_front_scenes
 class ThreedFront(BaseDataset):
     """Container for the scenes in the 3D-FRONT dataset.
 
-        Arguments
-        ---------
-        scenes: list of Room objects for all scenes in 3D-FRONT dataset
+    Arguments
+    ---------
+    scenes: list of Room objects for all scenes in 3D-FRONT dataset
     """
+
     def __init__(self, scenes, bounds=None):
         super().__init__(scenes)
         assert isinstance(self.scenes[0], Room)
@@ -41,9 +42,7 @@ class ThreedFront(BaseDataset):
             self._angles = bounds["angles"]
 
     def __str__(self):
-        return "Dataset contains {} scenes with {} discrete types".format(
-                len(self.scenes), self.n_object_types
-        )
+        return f"Dataset contains {len(self.scenes)} scenes with {self.n_object_types} discrete types"
 
     @property
     def bbox(self):
@@ -67,10 +66,10 @@ class ThreedFront(BaseDataset):
         return box.size
 
     def _compute_bounds(self):
-        _size_min = np.array([10000000]*3)
-        _size_max = np.array([-10000000]*3)
-        _centroid_min = np.array([10000000]*3)
-        _centroid_max = np.array([-10000000]*3)
+        _size_min = np.array([10000000] * 3)
+        _size_max = np.array([-10000000] * 3)
+        _centroid_min = np.array([10000000] * 3)
+        _centroid_max = np.array([-10000000] * 3)
         _angle_min = np.array([10000000000])
         _angle_max = np.array([-10000000000])
         for s in self.scenes:
@@ -93,7 +92,7 @@ class ThreedFront(BaseDataset):
         return {
             "translations": self.centroids,
             "sizes": self.sizes,
-            "angles": self.angles
+            "angles": self.angles,
         }
 
     @property
@@ -127,18 +126,19 @@ class ThreedFront(BaseDataset):
 
     @property
     def class_order(self):
-        return dict(zip(
-            self.count_furniture.keys(),
-            range(len(self.count_furniture))
-        ))
+        return dict(
+            zip(
+                self.count_furniture.keys(),
+                range(len(self.count_furniture)),
+                strict=False,
+            )
+        )
 
     @property
     def class_frequencies(self):
         object_counts = self.count_furniture
         class_freq = {}
-        n_objects_in_dataset = sum(
-            [object_counts[k] for k, v in object_counts.items()]
-        )
+        n_objects_in_dataset = sum([object_counts[k] for k, v in object_counts.items()])
         for k, v in object_counts.items():
             class_freq[k] = object_counts[k] / n_objects_in_dataset
         return class_freq
@@ -163,14 +163,20 @@ class ThreedFront(BaseDataset):
         return self.object_types + ["start", "end"]
 
     @classmethod
-    def from_dataset_directory(cls, dataset_directory, path_to_model_info,
-                               path_to_models, path_to_room_masks_dir=None,
-                               path_to_bounds=None, filter_fn=lambda s: s):
+    def from_dataset_directory(
+        cls,
+        dataset_directory,
+        path_to_model_info,
+        path_to_models,
+        path_to_room_masks_dir=None,
+        path_to_bounds=None,
+        filter_fn=lambda s: s,
+    ):
         scenes = parse_threed_front_scenes(
             dataset_directory,
             path_to_model_info,
             path_to_models,
-            path_to_room_masks_dir
+            path_to_room_masks_dir,
         )
         bounds = None
         if path_to_bounds:
@@ -179,7 +185,7 @@ class ThreedFront(BaseDataset):
         return cls([s for s in map(filter_fn, scenes) if s], bounds)
 
 
-class CachedRoom(object):
+class CachedRoom:
     def __init__(
         self,
         scene_id,
@@ -191,7 +197,7 @@ class CachedRoom(object):
         translations,
         sizes,
         angles,
-        image_path
+        image_path,
     ):
         self.scene_id = scene_id
         self.room_layout = room_layout
@@ -206,8 +212,7 @@ class CachedRoom(object):
 
     @property
     def floor_plan(self):
-        return np.copy(self.floor_plan_vertices), \
-            np.copy(self.floor_plan_faces)
+        return np.copy(self.floor_plan_vertices), np.copy(self.floor_plan_faces)
 
     @property
     def room_mask(self):
@@ -221,15 +226,12 @@ class CachedThreedFront(ThreedFront):
 
         self._parse_train_stats(config["train_stats"])
 
-        self._tags = sorted([
-            oi
-            for oi in os.listdir(self._base_dir)
-            if oi.split("_")[1] in scene_ids
-        ])
-        self._path_to_rooms = sorted([
-            os.path.join(self._base_dir, pi, "boxes.npz")
-            for pi in self._tags
-        ])
+        self._tags = sorted(
+            [oi for oi in os.listdir(self._base_dir) if oi.split("_")[1] in scene_ids]
+        )
+        self._path_to_rooms = sorted(
+            [os.path.join(self._base_dir, pi, "boxes.npz") for pi in self._tags]
+        )
         rendered_scene = "rendered_scene_256.png"
         path_to_rendered_scene = os.path.join(
             self._base_dir, self._tags[0], rendered_scene
@@ -237,17 +239,16 @@ class CachedThreedFront(ThreedFront):
         if not os.path.isfile(path_to_rendered_scene):
             rendered_scene = "rendered_scene_256_no_lamps.png"
 
-        self._path_to_renders = sorted([
-            os.path.join(self._base_dir, pi, rendered_scene)
-            for pi in self._tags
-        ])
+        self._path_to_renders = sorted(
+            [os.path.join(self._base_dir, pi, rendered_scene) for pi in self._tags]
+        )
 
     def _get_room_layout(self, room_layout):
         # Resize the room_layout if needed
         img = Image.fromarray(room_layout[:, :, 0])
         img = img.resize(
             tuple(map(int, self.config["room_layout_size"].split(","))),
-            resample=Image.BILINEAR
+            resample=Image.BILINEAR,
         )
         D = np.asarray(img).astype(np.float32) / np.float32(255)
         return D
@@ -265,7 +266,7 @@ class CachedThreedFront(ThreedFront):
             translations=D["translations"],
             sizes=D["sizes"],
             angles=D["angles"],
-            image_path=self._path_to_renders[i]
+            image_path=self._path_to_renders[i],
         )
 
     def get_room_params(self, i):
@@ -278,25 +279,20 @@ class CachedThreedFront(ThreedFront):
             "class_labels": D["class_labels"],
             "translations": D["translations"],
             "sizes": D["sizes"],
-            "angles": D["angles"]
+            "angles": D["angles"],
         }
 
     def __len__(self):
         return len(self._path_to_rooms)
 
     def __str__(self):
-        return "Dataset contains {} scenes with {} discrete types".format(
-                len(self), self.n_object_types
-        )
+        return f"Dataset contains {len(self)} scenes with {self.n_object_types} discrete types"
 
     def _parse_train_stats(self, train_stats):
-        with open(os.path.join(self._base_dir, train_stats), "r") as f:
+        with open(os.path.join(self._base_dir, train_stats)) as f:
             train_stats = json.load(f)
         self._centroids = train_stats["bounds_translations"]
-        self._centroids = (
-            np.array(self._centroids[:3]),
-            np.array(self._centroids[3:])
-        )
+        self._centroids = (np.array(self._centroids[:3]), np.array(self._centroids[3:]))
         self._sizes = train_stats["bounds_sizes"]
         self._sizes = (np.array(self._sizes[:3]), np.array(self._sizes[3:]))
         self._angles = train_stats["bounds_angles"]

@@ -1,10 +1,10 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 import torch
 
@@ -12,7 +12,7 @@ from ..losses import cross_entropy_loss, dmll
 from ..stats_logger import StatsLogger
 
 
-class BBoxOutput(object):
+class BBoxOutput:
     def __init__(self, sizes, translations, angles, class_labels):
         self.sizes = sizes
         self.translations = translations
@@ -64,17 +64,21 @@ class BBoxOutput(object):
 class AutoregressiveBBoxOutput(BBoxOutput):
     def __init__(self, sizes, translations, angles, class_labels):
         self.sizes_x, self.sizes_y, self.sizes_z = sizes
-        self.translations_x, self.translations_y, self.translations_z = \
-            translations
+        self.translations_x, self.translations_y, self.translations_z = translations
         self.class_labels = class_labels
         self.angles = angles
 
     @property
     def members(self):
         return (
-            self.sizes_x, self.sizes_y, self.sizes_z,
-            self.translations_x, self.translations_y, self.translations_z,
-            self.angles, self.class_labels
+            self.sizes_x,
+            self.sizes_y,
+            self.sizes_z,
+            self.translations_x,
+            self.translations_y,
+            self.translations_z,
+            self.angles,
+            self.class_labels,
         )
 
     @property
@@ -107,7 +111,7 @@ class AutoregressiveBBoxOutput(BBoxOutput):
         label_loss = cross_entropy_loss(self.class_labels, target["labels"])
 
         # For the translations, sizes and angles compute the discretized
-        # logistic mixture likelihood as described in 
+        # logistic mixture likelihood as described in
         # PIXELCNN++: Improving the PixelCNN with Discretized Logistic Mixture Likelihood and
         # Other Modifications, by Salimans et al.
         translation_loss = dmll(self.translations_x, target["translations_x"])
@@ -122,8 +126,7 @@ class AutoregressiveBBoxOutput(BBoxOutput):
 
     def reconstruction_loss(self, X_target, lengths):
         # Compute the losses
-        label_loss, translation_loss, size_loss, angle_loss = \
-            self.get_losses(X_target)
+        label_loss, translation_loss, size_loss, angle_loss = self.get_losses(X_target)
 
         label_loss = label_loss.mean()
         translation_loss = translation_loss.mean()
@@ -131,8 +134,7 @@ class AutoregressiveBBoxOutput(BBoxOutput):
         angle_loss = angle_loss.mean()
 
         StatsLogger.instance()["losses.size"].value = size_loss.item()
-        StatsLogger.instance()["losses.translation"].value = \
-            translation_loss.item()
+        StatsLogger.instance()["losses.translation"].value = translation_loss.item()
         StatsLogger.instance()["losses.angle"].value = angle_loss.item()
         StatsLogger.instance()["losses.label"].value = label_loss.item()
 

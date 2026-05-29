@@ -1,10 +1,10 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 import torch
 from torch import nn
@@ -14,8 +14,8 @@ from .frozen_batchnorm import FrozenBatchNorm2d
 
 
 class BaseFeatureExtractor(nn.Module):
-    """Hold some common functions among all feature extractor networks.
-    """
+    """Hold some common functions among all feature extractor networks."""
+
     @property
     def feature_size(self):
         return self._feature_size
@@ -28,6 +28,7 @@ class ResNet18(BaseFeatureExtractor):
     """Build a feature extractor using the pretrained ResNet18 architecture for
     image based inputs.
     """
+
     def __init__(self, freeze_bn, input_channels, feature_size):
         super(ResNet18, self).__init__()
         self._feature_size = feature_size
@@ -42,12 +43,11 @@ class ResNet18(BaseFeatureExtractor):
             kernel_size=(7, 7),
             stride=(2, 2),
             padding=(3, 3),
-            bias=False
+            bias=False,
         )
 
         self._feature_extractor.fc = nn.Sequential(
-            nn.Linear(512, 512), nn.ReLU(),
-            nn.Linear(512, self.feature_size)
+            nn.Linear(512, 512), nn.ReLU(), nn.Linear(512, self.feature_size)
         )
         self._feature_extractor.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
@@ -76,18 +76,13 @@ class AlexNet(BaseFeatureExtractor):
         return X
 
 
-def get_feature_extractor(
-    name,
-    freeze_bn=False,
-    input_channels=1,
-    feature_size=128
-):
+def get_feature_extractor(name, freeze_bn=False, input_channels=1, feature_size=128):
     """Based on the name return the appropriate feature extractor."""
     return {
         "resnet18": ResNet18(
             freeze_bn=freeze_bn,
             input_channels=input_channels,
-            feature_size=feature_size
+            feature_size=feature_size,
         ),
-        "alexnet": AlexNet(input_channels, feature_size=feature_size)
+        "alexnet": AlexNet(input_channels, feature_size=feature_size),
     }[name]

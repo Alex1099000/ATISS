@@ -1,26 +1,22 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 import numpy as np
-from PIL import Image
 import trimesh
-
+from PIL import Image
 from simple_3dviz.renderables.textured_mesh import Material, TexturedMesh
-
 
 _TEXTURE_CACHE = {}
 
 
 def read_texture_image(path):
     if path not in _TEXTURE_CACHE:
-        _TEXTURE_CACHE[path] = np.ascontiguousarray(
-            Image.open(path).convert("RGBA")
-        )
+        _TEXTURE_CACHE[path] = np.ascontiguousarray(Image.open(path).convert("RGBA"))
     return _TEXTURE_CACHE[path]
 
 
@@ -41,9 +37,8 @@ def set_renderable_texture(renderable, texture_path):
 def get_textured_objects(bbox_params_t, objects_dataset, classes):
     # For each one of the boxes replace them with an object
     renderables = []
-    lines_renderables = []
     trimesh_meshes = []
-    for j in range(1, bbox_params_t.shape[1]-1):
+    for j in range(1, bbox_params_t.shape[1] - 1):
         query_size = bbox_params_t[0, j, -4:-1]
         query_label = classes[bbox_params_t[0, j, :-7].argmax(-1)]
         furniture = objects_dataset.get_closest_furniture_to_box(
@@ -58,7 +53,7 @@ def get_textured_objects(bbox_params_t, objects_dataset, classes):
         # Compute the centroid of the vertices in order to match the
         # bbox (because the prediction only considers bboxes)
         bbox = raw_mesh.bbox
-        centroid = (bbox[0] + bbox[1])/2
+        centroid = (bbox[0] + bbox[1]) / 2
 
         # Extract the predicted affine transformation to position the
         # mesh
@@ -69,7 +64,7 @@ def get_textured_objects(bbox_params_t, objects_dataset, classes):
         R[0, 2] = -np.sin(theta)
         R[2, 0] = np.sin(theta)
         R[2, 2] = np.cos(theta)
-        R[1, 1] = 1.
+        R[1, 1] = 1.0
 
         # Apply the transformations in order to correctly position the mesh
         raw_mesh.affine_transform(t=-centroid)
@@ -104,17 +99,13 @@ def get_floor_plan(scene, floor_textures):
         vertices=vertices,
         uv=uv,
         faces=faces,
-        material=Material.with_texture_image(texture)
+        material=Material.with_texture_image(texture),
     )
 
-    tr_floor = trimesh.Trimesh(
-        np.copy(vertices), np.copy(faces), process=False
-    )
+    tr_floor = trimesh.Trimesh(np.copy(vertices), np.copy(faces), process=False)
     tr_floor.visual = trimesh.visual.TextureVisuals(
         uv=np.copy(uv),
-        material=trimesh.visual.material.SimpleMaterial(
-            image=Image.open(texture)
-        )
+        material=trimesh.visual.material.SimpleMaterial(image=Image.open(texture)),
     )
 
     return floor, tr_floor

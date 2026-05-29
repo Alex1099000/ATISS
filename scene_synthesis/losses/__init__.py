@@ -1,15 +1,13 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 import numpy as np
-
 import torch
-import torch.nn as nn
 from torch.nn import functional as F
 
 
@@ -17,9 +15,7 @@ def cross_entropy_loss(pred, target):
     """Cross entropy loss."""
     B, L, C = target.shape
     loss = torch.nn.functional.cross_entropy(
-        pred.reshape(-1, C),
-        target.reshape(-1, C).argmax(-1),
-        reduction="none"
+        pred.reshape(-1, C), target.reshape(-1, C).argmax(-1), reduction="none"
     ).reshape(B, L)
 
     return loss
@@ -60,16 +56,14 @@ def dmll(pred, target, log_scale_min=-7.0, num_classes=256):
 
     # unpack parameters. (B, T, num_mixtures) x 3
     logit_probs = pred[:, :, :nr_mix]
-    means = pred[:, :, nr_mix:2 * nr_mix]
-    log_scales = torch.clamp(
-        pred[:, :, 2 * nr_mix:3 * nr_mix], min=log_scale_min
-    )
+    means = pred[:, :, nr_mix : 2 * nr_mix]
+    log_scales = torch.clamp(pred[:, :, 2 * nr_mix : 3 * nr_mix], min=log_scale_min)
 
     centered_y = target - means
     inv_stdv = torch.exp(-log_scales)
-    plus_in = inv_stdv * (centered_y + 1. / (num_classes - 1))
+    plus_in = inv_stdv * (centered_y + 1.0 / (num_classes - 1))
     cdf_plus = torch.sigmoid(plus_in)
-    min_in = inv_stdv * (centered_y - 1. / (num_classes - 1))
+    min_in = inv_stdv * (centered_y - 1.0 / (num_classes - 1))
     cdf_min = torch.sigmoid(min_in)
 
     # log probability for edge case of 0 (before scaling)
@@ -86,7 +80,7 @@ def dmll(pred, target, log_scale_min=-7.0, num_classes=256):
     mid_in = inv_stdv * centered_y
     # log probability in the center of the bin, to be used in extreme cases
     # (not actually used in our code)
-    log_pdf_mid = mid_in - log_scales - 2. * F.softplus(mid_in)
+    log_pdf_mid = mid_in - log_scales - 2.0 * F.softplus(mid_in)
 
     # tf equivalent
     """
@@ -100,14 +94,15 @@ def dmll(pred, target, log_scale_min=-7.0, num_classes=256):
     # for num_classes=65536 case? 1e-7? not sure..
     inner_inner_cond = (cdf_delta > 1e-5).float()
 
-    inner_inner_out = inner_inner_cond * \
-        torch.log(torch.clamp(cdf_delta, min=1e-12)) + \
-        (1. - inner_inner_cond) * (log_pdf_mid - np.log((num_classes - 1) / 2))
+    inner_inner_out = inner_inner_cond * torch.log(
+        torch.clamp(cdf_delta, min=1e-12)
+    ) + (1.0 - inner_inner_cond) * (log_pdf_mid - np.log((num_classes - 1) / 2))
     inner_cond = (target > 0.999).float()
-    inner_out = inner_cond * log_one_minus_cdf_min + \
-        (1. - inner_cond) * inner_inner_out
+    inner_out = (
+        inner_cond * log_one_minus_cdf_min + (1.0 - inner_cond) * inner_inner_out
+    )
     cond = (target < -0.999).float()
-    log_probs = cond * log_cdf_plus + (1. - cond) * inner_out
+    log_probs = cond * log_cdf_plus + (1.0 - cond) * inner_out
 
     log_probs = log_probs + F.log_softmax(logit_probs, -1)
     return -log_sum_exp(log_probs)

@@ -1,10 +1,10 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 import torch
 import torch.nn as nn
@@ -15,6 +15,7 @@ class FrozenBatchNorm2d(nn.Module):
     """A BatchNorm2d wrapper for Pytorch's BatchNorm2d where the batch
     statictis are fixed.
     """
+
     def __init__(self, num_features):
         super(FrozenBatchNorm2d, self).__init__()
         self.num_features = num_features
@@ -24,7 +25,7 @@ class FrozenBatchNorm2d(nn.Module):
         self.register_buffer("running_var", torch.ones(num_features))
 
     def extra_repr(self):
-        return '{num_features}'.format(**self.__dict__)
+        return "{num_features}".format(**self.__dict__)
 
     @classmethod
     def from_batch_norm(cls, bn):
@@ -49,7 +50,7 @@ class FrozenBatchNorm2d(nn.Module):
 
     @staticmethod
     def freeze(m):
-        for (name, layer) in m.named_modules():
+        for name, layer in m.named_modules():
             if isinstance(layer, nn.BatchNorm2d):
                 nest = name.split(".")
                 if len(nest) == 1:
@@ -58,7 +59,7 @@ class FrozenBatchNorm2d(nn.Module):
                     setattr(
                         FrozenBatchNorm2d._getattr_nested(m, nest[:-1]),
                         nest[-1],
-                        FrozenBatchNorm2d.from_batch_norm(layer)
+                        FrozenBatchNorm2d.from_batch_norm(layer),
                     )
 
     def forward(self, x):

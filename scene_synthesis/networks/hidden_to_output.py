@@ -1,16 +1,16 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 import torch
 import torch.nn as nn
 
-from .bbox_output import AutoregressiveBBoxOutput
 from .base import FixedPositionalEncoding, sample_from_dmll
+from .bbox_output import AutoregressiveBBoxOutput
 
 
 class Hidden2Output(nn.Module):
@@ -21,10 +21,10 @@ class Hidden2Output(nn.Module):
         self.hidden_size = hidden_size
 
         mlp_layers = [
-            nn.Linear(hidden_size, 2*hidden_size),
+            nn.Linear(hidden_size, 2 * hidden_size),
             nn.ReLU(),
-            nn.Linear(2*hidden_size, hidden_size),
-            nn.ReLU()
+            nn.Linear(2 * hidden_size, hidden_size),
+            nn.ReLU(),
         ]
         self.hidden2output = nn.Sequential(*mlp_layers)
 
@@ -36,13 +36,9 @@ class Hidden2Output(nn.Module):
         translations = (
             self.centroid_layer_x(x),
             self.centroid_layer_y(x),
-            self.centroid_layer_z(x)
+            self.centroid_layer_z(x),
         )
-        sizes = (
-            self.size_layer_x(x),
-            self.size_layer_y(x),
-            self.size_layer_z(x)
-        )
+        sizes = (self.size_layer_x(x), self.size_layer_y(x), self.size_layer_z(x))
         angles = self.angle_layer(x)
         return class_labels, translations, sizes, angles
 
@@ -52,17 +48,12 @@ class Hidden2Output(nn.Module):
 
 class AutoregressiveDMLL(Hidden2Output):
     def __init__(
-        self,
-        hidden_size,
-        n_classes,
-        n_mixtures,
-        bbox_output,
-        with_extra_fc=False
+        self, hidden_size, n_classes, n_mixtures, bbox_output, with_extra_fc=False
     ):
         super().__init__(hidden_size, n_classes, with_extra_fc)
 
         if not isinstance(n_mixtures, list):
-            n_mixtures = [n_mixtures]*7
+            n_mixtures = [n_mixtures] * 7
 
         self.class_layer = nn.Linear(hidden_size, n_classes)
 
@@ -76,39 +67,31 @@ class AutoregressiveDMLL(Hidden2Output):
 
         c_hidden_size = hidden_size + 64
         self.centroid_layer_x = AutoregressiveDMLL._mlp(
-            c_hidden_size, n_mixtures[0]*3
+            c_hidden_size, n_mixtures[0] * 3
         )
         self.centroid_layer_y = AutoregressiveDMLL._mlp(
-            c_hidden_size, n_mixtures[1]*3
+            c_hidden_size, n_mixtures[1] * 3
         )
         self.centroid_layer_z = AutoregressiveDMLL._mlp(
-            c_hidden_size, n_mixtures[2]*3
+            c_hidden_size, n_mixtures[2] * 3
         )
-        c_hidden_size = c_hidden_size + 64*3
-        self.angle_layer = AutoregressiveDMLL._mlp(
-            c_hidden_size, n_mixtures[6]*3
-        )
+        c_hidden_size = c_hidden_size + 64 * 3
+        self.angle_layer = AutoregressiveDMLL._mlp(c_hidden_size, n_mixtures[6] * 3)
         c_hidden_size = c_hidden_size + 64
-        self.size_layer_x = AutoregressiveDMLL._mlp(
-            c_hidden_size, n_mixtures[3]*3
-        )
-        self.size_layer_y = AutoregressiveDMLL._mlp(
-            c_hidden_size, n_mixtures[4]*3
-        )
-        self.size_layer_z = AutoregressiveDMLL._mlp(
-            c_hidden_size, n_mixtures[5]*3
-        )
+        self.size_layer_x = AutoregressiveDMLL._mlp(c_hidden_size, n_mixtures[3] * 3)
+        self.size_layer_y = AutoregressiveDMLL._mlp(c_hidden_size, n_mixtures[4] * 3)
+        self.size_layer_z = AutoregressiveDMLL._mlp(c_hidden_size, n_mixtures[5] * 3)
 
         self.bbox_output = bbox_output
 
     @staticmethod
     def _mlp(hidden_size, output_size):
         mlp_layers = [
-            nn.Linear(hidden_size, 2*hidden_size),
+            nn.Linear(hidden_size, 2 * hidden_size),
             nn.ReLU(),
-            nn.Linear(2*hidden_size, hidden_size),
+            nn.Linear(2 * hidden_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, output_size)
+            nn.Linear(hidden_size, output_size),
         ]
         return nn.Sequential(*mlp_layers)
 
@@ -124,12 +107,11 @@ class AutoregressiveDMLL(Hidden2Output):
     def get_dmll_params(pred):
         assert len(pred.shape) == 2
 
-        N = pred.size(0)
         nr_mix = pred.size(1) // 3
 
         probs = torch.softmax(pred[:, :nr_mix], dim=-1)
-        means = pred[:, nr_mix:2 * nr_mix]
-        scales = torch.nn.functional.elu(pred[:, 2*nr_mix:3*nr_mix]) + 1.0001
+        means = pred[:, nr_mix : 2 * nr_mix]
+        scales = torch.nn.functional.elu(pred[:, 2 * nr_mix : 3 * nr_mix]) + 1.0001
 
         return probs, means, scales
 
@@ -139,9 +121,9 @@ class AutoregressiveDMLL(Hidden2Output):
 
         c = self.fc_class_labels(class_labels)
         cf = torch.cat([x, c], dim=-1)
-        translations_x = self.centroid_layer_x(cf).reshape(B*L, -1)
-        translations_y = self.centroid_layer_y(cf).reshape(B*L, -1)
-        translations_z = self.centroid_layer_z(cf).reshape(B*L, -1)
+        translations_x = self.centroid_layer_x(cf).reshape(B * L, -1)
+        translations_y = self.centroid_layer_y(cf).reshape(B * L, -1)
+        translations_z = self.centroid_layer_z(cf).reshape(B * L, -1)
 
         dmll_params = {}
         p = AutoregressiveDMLL.get_dmll_params(translations_x)
@@ -169,7 +151,7 @@ class AutoregressiveDMLL(Hidden2Output):
         C = self.n_classes
 
         # Sample the class
-        class_probs = torch.softmax(class_labels, dim=-1).view(B*L, C)
+        class_probs = torch.softmax(class_labels, dim=-1).view(B * L, C)
         sampled_classes = torch.multinomial(class_probs, 1).view(B, L)
         return torch.eye(C, device=x.device)[sampled_classes]
 
@@ -183,9 +165,9 @@ class AutoregressiveDMLL(Hidden2Output):
         translations_y = self.centroid_layer_y(cf)
         translations_z = self.centroid_layer_z(cf)
 
-        t_x = sample_from_dmll(translations_x.reshape(B*L, -1))
-        t_y = sample_from_dmll(translations_y.reshape(B*L, -1))
-        t_z = sample_from_dmll(translations_z.reshape(B*L, -1))
+        t_x = sample_from_dmll(translations_x.reshape(B * L, -1))
+        t_y = sample_from_dmll(translations_y.reshape(B * L, -1))
+        t_z = sample_from_dmll(translations_z.reshape(B * L, -1))
         return torch.cat([t_x, t_y, t_z], dim=-1).view(B, L, 3)
 
     def sample_angles(self, x, class_labels, translations):
@@ -199,7 +181,7 @@ class AutoregressiveDMLL(Hidden2Output):
         tz = self.pe_trans_z(translations[:, :, 2:3])
         tf = torch.cat([cf, tx, ty, tz], dim=-1)
         angles = self.angle_layer(tf)
-        return sample_from_dmll(angles.reshape(B*L, -1)).view(B, L, 1)
+        return sample_from_dmll(angles.reshape(B * L, -1)).view(B, L, 1)
 
     def sample_sizes(self, x, class_labels, translations, angles):
         # Extract the sizes in local variables for convenience
@@ -218,20 +200,22 @@ class AutoregressiveDMLL(Hidden2Output):
         sizes_y = self.size_layer_y(sf)
         sizes_z = self.size_layer_z(sf)
 
-        s_x = sample_from_dmll(sizes_x.reshape(B*L, -1))
-        s_y = sample_from_dmll(sizes_y.reshape(B*L, -1))
-        s_z = sample_from_dmll(sizes_z.reshape(B*L, -1))
+        s_x = sample_from_dmll(sizes_x.reshape(B * L, -1))
+        s_y = sample_from_dmll(sizes_y.reshape(B * L, -1))
+        s_z = sample_from_dmll(sizes_z.reshape(B * L, -1))
         return torch.cat([s_x, s_y, s_z], dim=-1).view(B, L, 3)
 
     def pred_class_probs(self, x):
         class_labels = self.class_layer(x)
 
         # Extract the sizes in local variables for convenience
-        b, l, _ = class_labels.shape
+        batch_size, sequence_length, _ = class_labels.shape
         c = self.n_classes
 
         # Sample the class
-        class_probs = torch.softmax(class_labels, dim=-1).view(b*l, c)
+        class_probs = torch.softmax(class_labels, dim=-1).view(
+            batch_size * sequence_length, c
+        )
 
         return class_probs
 
@@ -239,12 +223,11 @@ class AutoregressiveDMLL(Hidden2Output):
         def dmll_params_from_pred(pred):
             assert len(pred.shape) == 2
 
-            N = pred.size(0)
             nr_mix = pred.size(1) // 3
 
             probs = torch.softmax(pred[:, :nr_mix], dim=-1)
-            means = pred[:, nr_mix:2 * nr_mix]
-            scales = torch.nn.functional.elu(pred[:, 2*nr_mix:3*nr_mix])
+            means = pred[:, nr_mix : 2 * nr_mix]
+            scales = torch.nn.functional.elu(pred[:, 2 * nr_mix : 3 * nr_mix])
             scales = scales + 1.0001
 
             return probs, means, scales
@@ -254,12 +237,15 @@ class AutoregressiveDMLL(Hidden2Output):
 
         c = self.fc_class_labels(class_labels)
         cf = torch.cat([x, c], dim=-1)
-        t_x = self.centroid_layer_x(cf).reshape(B*L, -1)
-        t_y = self.centroid_layer_y(cf).reshape(B*L, -1)
-        t_z = self.centroid_layer_z(cf).reshape(B*L, -1)
+        t_x = self.centroid_layer_x(cf).reshape(B * L, -1)
+        t_y = self.centroid_layer_y(cf).reshape(B * L, -1)
+        t_z = self.centroid_layer_z(cf).reshape(B * L, -1)
 
-        return dmll_params_from_pred(t_x), dmll_params_from_pred(t_y),\
-            dmll_params_from_pred(t_z)
+        return (
+            dmll_params_from_pred(t_x),
+            dmll_params_from_pred(t_y),
+            dmll_params_from_pred(t_z),
+        )
 
     def forward(self, x, sample_params):
         if self.with_extra_fc:
@@ -267,10 +253,9 @@ class AutoregressiveDMLL(Hidden2Output):
 
         # Extract the target properties from sample_params and embed them into
         # a higher dimensional space.
-        target_properties = \
-            AutoregressiveDMLL._extract_properties_from_target(
-                sample_params
-            )
+        target_properties = AutoregressiveDMLL._extract_properties_from_target(
+            sample_params
+        )
 
         class_labels = target_properties[0]
         translations = target_properties[1]
@@ -290,21 +275,15 @@ class AutoregressiveDMLL(Hidden2Output):
         translations = (
             self.centroid_layer_x(cf),
             self.centroid_layer_y(cf),
-            self.centroid_layer_z(cf)
+            self.centroid_layer_z(cf),
         )
         tf = torch.cat([cf, tx, ty, tz], dim=-1)
         angles = self.angle_layer(tf)
         sf = torch.cat([tf, a], dim=-1)
-        sizes = (
-            self.size_layer_x(sf),
-            self.size_layer_y(sf),
-            self.size_layer_z(sf)
-        )
+        sizes = (self.size_layer_x(sf), self.size_layer_y(sf), self.size_layer_z(sf))
 
         return self.bbox_output(sizes, translations, angles, class_labels)
 
 
 def get_bbox_output(bbox_type):
-    return {
-        "autoregressive_mlc": AutoregressiveBBoxOutput
-    }[bbox_type]
+    return {"autoregressive_mlc": AutoregressiveBBoxOutput}[bbox_type]

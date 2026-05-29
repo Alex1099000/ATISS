@@ -1,21 +1,22 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 from collections import Counter
 
 import numpy as np
 import torch
-from torch.utils.data import IterableDataset, Dataset
+from torch.utils.data import Dataset, IterableDataset
 
 
 class InfiniteDataset(IterableDataset):
     """Decorate any Dataset instance to provide an infinite IterableDataset
     version of it."""
+
     def __init__(self, dataset, shuffle=True):
         super().__init__()
         self.dataset = dataset
@@ -46,6 +47,7 @@ class InfiniteDataset(IterableDataset):
 
 class BaseDataset(Dataset):
     """Implements the interface for all datasets that consist of scenes."""
+
     def __init__(self, scenes):
         assert len(scenes) > 0
         self.scenes = scenes
@@ -88,30 +90,35 @@ class BaseDataset(Dataset):
     def with_valid_scene_ids(invalid_scene_ids):
         def inner(scene):
             return scene if scene.scene_id not in invalid_scene_ids else False
+
         return inner
 
     @staticmethod
     def with_scene_ids(scene_ids):
         def inner(scene):
             return scene if scene.scene_id in scene_ids else False
+
         return inner
 
     @staticmethod
     def with_room(scene_type):
         def inner(scene):
             return scene if scene_type in scene.scene_type else False
+
         return inner
 
     @staticmethod
     def room_smaller_than_along_axis(max_size, axis=1):
         def inner(scene):
             return scene if scene.bbox[1][axis] <= max_size else False
+
         return inner
 
     @staticmethod
     def room_larger_than_along_axis(min_size, axis=1):
         def inner(scene):
             return scene if scene.bbox[0][axis] >= min_size else False
+
         return inner
 
     @staticmethod
@@ -124,24 +131,27 @@ class BaseDataset(Dataset):
                 return scene
             else:
                 False
+
         return inner
 
     @staticmethod
     def with_valid_boxes(box_types):
         def inner(scene):
-            for i in range(len(scene.bboxes)-1, -1, -1):
+            for i in range(len(scene.bboxes) - 1, -1, -1):
                 if scene.bboxes[i].label not in box_types:
                     scene.bboxes.pop(i)
             return scene
+
         return inner
 
     @staticmethod
     def without_box_types(box_types):
         def inner(scene):
-            for i in range(len(scene.bboxes)-1, -1, -1):
+            for i in range(len(scene.bboxes) - 1, -1, -1):
                 if scene.bboxes[i].label in box_types:
                     scene.bboxes.pop(i)
             return scene
+
         return inner
 
     @staticmethod
@@ -151,54 +161,53 @@ class BaseDataset(Dataset):
                 # Update the box label based on the box_types_map
                 box.label = box_types_map[box.label]
             return scene
+
         return inner
 
     @staticmethod
     def with_valid_bbox_jids(invalid_bbox_jds):
         def inner(scene):
             return (
-                False if any(b.model_jid in invalid_bbox_jds for b in scene.bboxes)
+                False
+                if any(b.model_jid in invalid_bbox_jds for b in scene.bboxes)
                 else scene
             )
+
         return inner
 
     @staticmethod
     def at_most_boxes(n):
         def inner(scene):
             return scene if len(scene.bboxes) <= n else False
+
         return inner
 
     @staticmethod
     def at_least_boxes(n):
         def inner(scene):
             return scene if len(scene.bboxes) >= n else False
+
         return inner
 
     @staticmethod
     def with_object_types(objects):
         def inner(scene):
-            return (
-                scene if all(b.label in objects for b in scene.bboxes)
-                else False
-            )
+            return scene if all(b.label in objects for b in scene.bboxes) else False
+
         return inner
 
     @staticmethod
     def contains_object_types(objects):
         def inner(scene):
-            return (
-                scene if any(b.label in objects for b in scene.bboxes)
-                else False
-            )
+            return scene if any(b.label in objects for b in scene.bboxes) else False
+
         return inner
 
     @staticmethod
     def without_object_types(objects):
         def inner(scene):
-            return (
-                False if any(b.label in objects for b in scene.bboxes)
-                else scene
-            )
+            return False if any(b.label in objects for b in scene.bboxes) else scene
+
         return inner
 
     @staticmethod
@@ -212,20 +221,20 @@ class BaseDataset(Dataset):
             except StopIteration:
                 pass
             return s
+
         return inner
 
 
-class BaseScene(object):
+class BaseScene:
     """Contains all the information for a scene."""
+
     def __init__(self, scene_id, scene_type, bboxes):
         self.bboxes = bboxes
         self.scene_id = scene_id
         self.scene_type = scene_type
 
     def __str__(self):
-        return "Scene: {} of type: {} contains {} bboxes".format(
-            self.scene_id, self.scene_type, self.nobjects
-        )
+        return f"Scene: {self.scene_id} of type: {self.scene_type} contains {self.nobjects} bboxes"
 
     @property
     def nobjects(self):

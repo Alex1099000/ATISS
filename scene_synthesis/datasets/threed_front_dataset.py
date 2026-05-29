@@ -1,23 +1,23 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
-
-import numpy as np
+#
 
 from functools import lru_cache
-from scipy.ndimage import rotate
 
+import numpy as np
 import torch
+from scipy.ndimage import rotate
 from torch.utils.data import Dataset
 
 
 class DatasetDecoratorBase(Dataset):
     """A base class that helps us implement decorators for ThreeDFront-like
     datasets."""
+
     def __init__(self, dataset):
         self._dataset = dataset
 
@@ -74,16 +74,14 @@ class BoxOrderedDataset(DatasetDecoratorBase):
         if self.box_ordering is None:
             return scene.bboxes
         elif self.box_ordering == "class_frequencies":
-            return scene.ordered_bboxes_with_class_frequencies(
-                self.class_frequencies
-            )
+            return scene.ordered_bboxes_with_class_frequencies(self.class_frequencies)
         else:
             raise NotImplementedError()
 
 
 class DataEncoder(BoxOrderedDataset):
-    """DataEncoder is a wrapper for all datasets we have
-    """
+    """DataEncoder is a wrapper for all datasets we have"""
+
     @property
     def property_type(self):
         raise NotImplementedError()
@@ -106,6 +104,7 @@ class RoomLayoutEncoder(DataEncoder):
 
 class ClassLabelsEncoder(DataEncoder):
     """Implement the encoding for the class labels."""
+
     @property
     def property_type(self):
         return "class_labels"
@@ -214,35 +213,42 @@ class DatasetCollection(DatasetDecoratorBase):
         # Otherwise, pad the first dimension.
         padding_keys = set(k for k in key_set if len(samples[0][k].shape) == 2)
         sample_params = {}
-        sample_params.update({
-            k: np.stack([sample[k] for sample in samples], axis=0)
-            for k in (key_set-padding_keys)
-        })
+        sample_params.update(
+            {
+                k: np.stack([sample[k] for sample in samples], axis=0)
+                for k in (key_set - padding_keys)
+            }
+        )
 
-        sample_params.update({
-            k: np.stack([
-                np.vstack([
-                    sample[k],
-                    np.zeros((max_length-len(sample[k]), sample[k].shape[1]))
-                ]) for sample in samples
-            ], axis=0)
-            for k in padding_keys
-        })
-        sample_params["lengths"] = np.array([
-            sample["length"] for sample in samples
-        ])
+        sample_params.update(
+            {
+                k: np.stack(
+                    [
+                        np.vstack(
+                            [
+                                sample[k],
+                                np.zeros(
+                                    (max_length - len(sample[k]), sample[k].shape[1])
+                                ),
+                            ]
+                        )
+                        for sample in samples
+                    ],
+                    axis=0,
+                )
+                for k in padding_keys
+            }
+        )
+        sample_params["lengths"] = np.array([sample["length"] for sample in samples])
 
         # Make torch tensors from the numpy tensors
         torch_sample = {
-            k: torch.from_numpy(sample_params[k]).float()
-            for k in sample_params
+            k: torch.from_numpy(sample_params[k]).float() for k in sample_params
         }
 
-        torch_sample.update({
-            k: torch_sample[k][:, None]
-            for k in torch_sample.keys()
-            if "_tr" in k
-        })
+        torch_sample.update(
+            {k: torch_sample[k][:, None] for k in torch_sample.keys() if "_tr" in k}
+        )
 
         return torch_sample
 
@@ -273,7 +279,7 @@ class RotationAugmentation(DatasetDecoratorBase):
         R[0, 2] = -np.sin(theta)
         R[2, 0] = np.sin(theta)
         R[2, 2] = np.cos(theta)
-        R[1, 1] = 1.
+        R[1, 1] = 1.0
         return R
 
     @property
@@ -294,15 +300,14 @@ class RotationAugmentation(DatasetDecoratorBase):
                 sample_params[k] = v.dot(R)
             elif k == "angles":
                 angle_min, angle_max = self.bounds["angles"]
-                sample_params[k] = \
-                    (v + rot_angle - angle_min) % (2 * np.pi) + angle_min
+                sample_params[k] = (v + rot_angle - angle_min) % (2 * np.pi) + angle_min
             elif k == "room_layout":
                 # Fix the ordering of the channels because it was previously
                 # changed
                 img = np.transpose(v, (1, 2, 0))
-                sample_params[k] = np.transpose(rotate(
-                    img, rot_angle * 180 / np.pi, reshape=False
-                ), (2, 0, 1))
+                sample_params[k] = np.transpose(
+                    rotate(img, rot_angle * 180 / np.pi, reshape=False), (2, 0, 1)
+                )
         return sample_params
 
 
@@ -311,7 +316,7 @@ class Scale(DatasetDecoratorBase):
     def scale(x, minimum, maximum):
         X = x.astype(np.float32)
         X = np.clip(X, minimum, maximum)
-        X = ((X - minimum) / (maximum - minimum))
+        X = (X - minimum) / (maximum - minimum)
         X = 2 * X - 1
         return X
 
@@ -326,9 +331,7 @@ class Scale(DatasetDecoratorBase):
         sample_params = self._dataset[idx]
         for k, v in sample_params.items():
             if k in bounds:
-                sample_params[k] = Scale.scale(
-                    v, bounds[k][0], bounds[k][1]
-                )
+                sample_params[k] = Scale.scale(v, bounds[k][0], bounds[k][1])
         return sample_params
 
     def post_process(self, s):
@@ -338,9 +341,7 @@ class Scale(DatasetDecoratorBase):
             if k == "room_layout" or k == "class_labels":
                 sample_params[k] = v
             else:
-                sample_params[k] = Scale.descale(
-                    v, bounds[k][0], bounds[k][1]
-                )
+                sample_params[k] = Scale.descale(v, bounds[k][0], bounds[k][1])
         return super().post_process(sample_params)
 
     @property
@@ -400,10 +401,7 @@ class OrderedDataset(DatasetDecoratorBase):
         c = sample["class_labels"].argmax(-1)
         class_frequencies = self.class_frequencies
         class_labels = self.class_labels
-        f = np.array([
-            [class_frequencies[class_labels[ci]]]
-            for ci in c
-        ])
+        f = np.array([[class_frequencies[class_labels[ci]]] for ci in c])
 
         return np.lexsort(np.hstack([t, f]).T)[::-1]
 
@@ -422,14 +420,12 @@ class Autoregressive(DatasetDecoratorBase):
                 L, C = class_labels.shape
                 # Add the end label the end of each sequence
                 end_label = np.eye(C)[-1]
-                sample_params_target[k+"_tr"] = np.vstack([
-                    class_labels, end_label
-                ])
+                sample_params_target[k + "_tr"] = np.vstack([class_labels, end_label])
             else:
                 p = np.copy(v)
                 # Set the attributes to for the end symbol
                 _, C = p.shape
-                sample_params_target[k+"_tr"] = np.vstack([p, np.zeros(C)])
+                sample_params_target[k + "_tr"] = np.vstack([p, np.zeros(C)])
 
         sample_params.update(sample_params_target)
 
@@ -452,7 +448,7 @@ class AutoregressiveWOCM(Autoregressive):
 
         # Split the boxes and generate input sequences and target boxes
         L, C = sample_params["class_labels"].shape
-        n_boxes = np.random.randint(0, L+1)
+        n_boxes = np.random.randint(0, L + 1)
 
         for k, v in sample_params.items():
             if k == "room_layout" or k == "length":
@@ -467,12 +463,7 @@ class AutoregressiveWOCM(Autoregressive):
         return sample_params
 
 
-def dataset_encoding_factory(
-    name,
-    dataset,
-    augmentations=None,
-    box_ordering=None
-):
+def dataset_encoding_factory(name, dataset, augmentations=None, box_ordering=None):
     # NOTE: The ordering might change after augmentations so really it should
     #       be done after the augmentations. For class frequencies it is fine
     #       though.
@@ -480,13 +471,10 @@ def dataset_encoding_factory(
         dataset_collection = OrderedDataset(
             CachedDatasetCollection(dataset),
             ["class_labels", "translations", "sizes", "angles"],
-            box_ordering=box_ordering
+            box_ordering=box_ordering,
         )
     else:
-        box_ordered_dataset = BoxOrderedDataset(
-            dataset,
-            box_ordering
-        )
+        box_ordered_dataset = BoxOrderedDataset(dataset, box_ordering)
         room_layout = RoomLayoutEncoder(box_ordered_dataset)
         class_labels = ClassLabelsEncoder(box_ordered_dataset)
         translations = TranslationEncoder(box_ordered_dataset)
@@ -494,20 +482,11 @@ def dataset_encoding_factory(
         angles = AngleEncoder(box_ordered_dataset)
 
         dataset_collection = DatasetCollection(
-            room_layout,
-            class_labels,
-            translations,
-            sizes,
-            angles
+            room_layout, class_labels, translations, sizes, angles
         )
 
     if name == "basic":
-        return DatasetCollection(
-            class_labels,
-            translations,
-            sizes,
-            angles
-        )
+        return DatasetCollection(class_labels, translations, sizes, angles)
 
     if isinstance(augmentations, list):
         for aug_type in augmentations:
@@ -526,8 +505,7 @@ def dataset_encoding_factory(
         return AutoregressiveWOCM(dataset_collection)
     elif "wocm" in name:
         dataset_collection = Permutation(
-            dataset_collection,
-            ["class_labels", "translations", "sizes", "angles"]
+            dataset_collection, ["class_labels", "translations", "sizes", "angles"]
         )
         return AutoregressiveWOCM(dataset_collection)
     else:

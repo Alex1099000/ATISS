@@ -1,15 +1,17 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 import csv
+
 import numpy as np
 
-class SplitsBuilder(object):
+
+class SplitsBuilder:
     def __init__(self, train_test_splits_file):
         self._train_test_splits_file = train_test_splits_file
         self._splits = {}
@@ -24,12 +26,12 @@ class SplitsBuilder(object):
         return self._splits["val"]
 
     def _parse_train_test_splits_file(self):
-        with open(self._train_test_splits_file, "r") as f:
+        with open(self._train_test_splits_file) as f:
             data = [row for row in csv.reader(f)]
         return np.array(data)
 
     def get_splits(self, keep_splits=["train, val"]):
-        if not isinstance(keep_splits , list):
+        if not isinstance(keep_splits, list):
             keep_splits = [keep_splits]
         # Return only the split
         s = []

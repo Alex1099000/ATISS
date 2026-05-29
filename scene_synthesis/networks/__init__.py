@@ -1,25 +1,30 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
-from functools import partial
 import torch
+
 try:
     from radam import RAdam
 except ImportError:
     pass
 
-from .autoregressive_transformer import AutoregressiveTransformer, \
-    AutoregressiveTransformerPE, \
-    train_on_batch as train_on_batch_simple_autoregressive, \
-    validate_on_batch as validate_on_batch_simple_autoregressive
-
-from .hidden_to_output import AutoregressiveDMLL, get_bbox_output
+from .autoregressive_transformer import (
+    AutoregressiveTransformer,
+    AutoregressiveTransformerPE,
+)
+from .autoregressive_transformer import (
+    train_on_batch as train_on_batch_simple_autoregressive,
+)
+from .autoregressive_transformer import (
+    validate_on_batch as validate_on_batch_simple_autoregressive,
+)
 from .feature_extractors import get_feature_extractor
+from .hidden_to_output import AutoregressiveDMLL, get_bbox_output
 
 
 def hidden2output_layer(config, n_classes):
@@ -60,12 +65,7 @@ def optimizer_factory(config, parameters):
         raise NotImplementedError()
 
 
-def build_network(
-    input_dims,
-    n_classes,
-    config,
-    weight_file=None,
-    device="cpu"):
+def build_network(input_dims, n_classes, config, weight_file=None, device="cpu"):
     network_type = config["network"]["type"]
 
     if network_type == "autoregressive_transformer":
@@ -80,7 +80,7 @@ def build_network(
                 input_channels=config["feature_extractor"].get("input_channels", 1),
                 feature_size=config["feature_extractor"].get("feature_size", 256),
             ),
-            config["network"]
+            config["network"],
         )
     elif network_type == "autoregressive_transformer_pe":
         train_on_batch = train_on_batch_simple_autoregressive
@@ -94,16 +94,14 @@ def build_network(
                 input_channels=config["feature_extractor"].get("input_channels", 1),
                 feature_size=config["feature_extractor"].get("feature_size", 256),
             ),
-            config["network"]
+            config["network"],
         )
     else:
         raise NotImplementedError()
 
     # Check whether there is a weight file provided to continue training from
     if weight_file is not None:
-        print("Loading weight file from {}".format(weight_file))
-        network.load_state_dict(
-            torch.load(weight_file, map_location=device)
-        )
+        print(f"Loading weight file from {weight_file}")
+        network.load_state_dict(torch.load(weight_file, map_location=device))
     network.to(device)
     return network, train_on_batch, validate_on_batch

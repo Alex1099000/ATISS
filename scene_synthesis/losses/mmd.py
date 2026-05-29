@@ -1,10 +1,10 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 import torch
 
@@ -40,7 +40,7 @@ def expected_gaussian_kernel(X, Y, gamma=1.0):
     X2 = X2.view(N, 1)
     Y2 = Y2.view(1, M)
 
-    return torch.exp(-gamma * (X2 + Y2 - 2*XY)).mean()
+    return torch.exp(-gamma * (X2 + Y2 - 2 * XY)).mean()
 
 
 def mmd(X, Y, gamma=1.0):

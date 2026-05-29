@@ -1,31 +1,27 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
-"""Script for computing the FID score between real and synthesized scenes.
-"""
+"""Script for computing the FID score between real and synthesized scenes."""
+
 import argparse
 import os
-import sys
-
-import torch
+import shutil
 
 import numpy as np
-from PIL import Image
-
+import torch
 from cleanfid import fid
-
-import shutil
+from PIL import Image
 
 from scene_synthesis.datasets.splits_builder import CSVSplitsBuilder
 from scene_synthesis.datasets.threed_front import CachedThreedFront
 
 
-class ThreedFrontRenderDataset(object):
+class ThreedFrontRenderDataset:
     def __init__(self, dataset):
         self.dataset = dataset
 
@@ -40,42 +36,41 @@ class ThreedFrontRenderDataset(object):
 
 def main(argv):
     parser = argparse.ArgumentParser(
-        description=("Compute the FID scores between the real and the "
-                     "synthetic images")
+        description=(
+            "Compute the FID scores between the real and the " "synthetic images"
+        )
     )
     parser.add_argument(
         "path_to_real_renderings",
-        help="Path to the folder containing the real renderings"
+        help="Path to the folder containing the real renderings",
     )
     parser.add_argument(
         "path_to_synthesized_renderings",
-        help="Path to the folder containing the synthesized"
+        help="Path to the folder containing the synthesized",
     )
     parser.add_argument(
-        "path_to_annotations",
-        help="Path to the folder containing the annotations"
+        "path_to_annotations", help="Path to the folder containing the annotations"
     )
 
     args = parser.parse_args(argv)
 
     # Create Real datasets
-    config = dict(
-        train_stats="dataset_stats.txt",
-        room_layout_size="256,256"
-    )
+    config = dict(train_stats="dataset_stats.txt", room_layout_size="256,256")
     splits_builder = CSVSplitsBuilder(args.path_to_annotations)
-    test_real = ThreedFrontRenderDataset(CachedThreedFront(
-        args.path_to_real_renderings,
-        config=config,
-        scene_ids=splits_builder.get_splits(["test"])
-    ))
+    test_real = ThreedFrontRenderDataset(
+        CachedThreedFront(
+            args.path_to_real_renderings,
+            config=config,
+            scene_ids=splits_builder.get_splits(["test"]),
+        )
+    )
 
     print("Generating temporary a folder with test_real images...")
     path_to_test_real = "/tmp/test_real/"
     if not os.path.exists(path_to_test_real):
         os.makedirs(path_to_test_real)
     for i, di in enumerate(test_real):
-        di.save("{}/{:05d}.png".format(path_to_test_real, i))
+        di.save(f"{path_to_test_real}/{i:05d}.png")
     # Number of images to be copied
     N = len(test_real)
 
@@ -95,10 +90,12 @@ def main(argv):
         np.random.shuffle(synthesized_images)
         synthesized_images_subset = np.random.choice(synthesized_images, N)
         for i, fi in enumerate(synthesized_images_subset):
-            shutil.copyfile(fi, "{}/{:05d}.png".format(path_to_test_fake, i))
+            shutil.copyfile(fi, f"{path_to_test_fake}/{i:05d}.png")
 
         # Compute the FID score
-        fid_score = fid.compute_fid(path_to_test_real, path_to_test_fake, device=torch.device("cpu"))
+        fid_score = fid.compute_fid(
+            path_to_test_real, path_to_test_fake, device=torch.device("cpu")
+        )
         scores.append(fid_score)
         print(fid_score)
     print(sum(scores) / len(scores))

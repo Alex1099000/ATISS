@@ -1,18 +1,19 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
+
+import pickle
 
 import numpy as np
-import pickle
 
 from .utils import parse_threed_future_models
 
 
-class ThreedFutureDataset(object):
+class ThreedFutureDataset:
     def __init__(self, objects):
         assert len(objects) > 0
         self.objects = objects
@@ -21,8 +22,9 @@ class ThreedFutureDataset(object):
         return len(self.objects)
 
     def __str__(self):
+        labels = {obj.label for obj in self.objects}
         return "Dataset contains {} objects with {} discrete types".format(
-            len(self)
+            len(self), len(labels)
         )
 
     def __getitem__(self, idx):
@@ -36,8 +38,8 @@ class ThreedFutureDataset(object):
 
         mses = {}
         for i, oi in enumerate(objects):
-            mses[oi] = np.sum((oi.size - query_size)**2, axis=-1)
-        sorted_mses = [k for k, v in sorted(mses.items(), key=lambda x:x[1])]
+            mses[oi] = np.sum((oi.size - query_size) ** 2, axis=-1)
+        sorted_mses = [k for k, v in sorted(mses.items(), key=lambda x: x[1])]
         return sorted_mses[0]
 
     def get_closest_furniture_to_2dbox(self, query_label, query_size):
@@ -45,10 +47,9 @@ class ThreedFutureDataset(object):
 
         mses = {}
         for i, oi in enumerate(objects):
-            mses[oi] = (
-                (oi.size[0] - query_size[0])**2 +
-                (oi.size[2] - query_size[1])**2
-            )
+            mses[oi] = (oi.size[0] - query_size[0]) ** 2 + (
+                oi.size[2] - query_size[1]
+            ) ** 2
         sorted_mses = [k for k, v in sorted(mses.items(), key=lambda x: x[1])]
         return sorted_mses[0]
 

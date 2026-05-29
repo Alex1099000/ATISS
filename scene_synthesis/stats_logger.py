@@ -1,12 +1,13 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 """Stats logger provides a method for logging training stats."""
+
 import sys
 
 try:
@@ -15,7 +16,7 @@ except ImportError:
     pass
 
 
-class AverageAggregator(object):
+class AverageAggregator:
     def __init__(self):
         self._value = 0
         self._count = 0
@@ -30,7 +31,7 @@ class AverageAggregator(object):
         self._count += 1
 
 
-class StatsLogger(object):
+class StatsLogger:
     __INSTANCE = None
 
     def __init__(self):
@@ -60,11 +61,11 @@ class StatsLogger(object):
         self._loss.value = loss
         fmt = "epoch: {} - batch: {} - loss: " + precision
         msg = fmt.format(epoch, batch, self._loss.value)
-        for k,  v in self._values.items():
+        for k, v in self._values.items():
             msg += " - " + k + ": " + precision.format(v.value)
         for f in self._output_files:
             if f.isatty():
-                print(msg + "\b"*len(msg), end="", flush=True, file=f)
+                print(msg + "\b" * len(msg), end="", flush=True, file=f)
             else:
                 print(msg, flush=True, file=f)
 
@@ -87,6 +88,7 @@ class WandB(StatsLogger):
         log_frequency: int, the log frequency passed to wandb.watch
                        (default: 10)
     """
+
     def init(
         self,
         experiment_arguments,
@@ -94,7 +96,7 @@ class WandB(StatsLogger):
         project="experiment",
         name="experiment_name",
         watch=True,
-        log_frequency=10
+        log_frequency=10,
     ):
         self.project = project
         self.experiment_name = name
@@ -109,7 +111,7 @@ class WandB(StatsLogger):
         wandb.init(
             project=(self.project or None),
             name=(self.experiment_name or None),
-            config=dict(experiment_arguments.items())
+            config=dict(experiment_arguments.items()),
         )
 
         if self.watch:
@@ -125,12 +127,9 @@ class WandB(StatsLogger):
     def clear(self):
         # Before clearing everything out send it to wandb
         prefix = "val_" if self._validation else ""
-        values = {
-            prefix+k: v.value
-            for k, v in self._values.items()
-        }
-        values[prefix+"loss"] = self._loss.value
-        values[prefix+"epoch"] = self._epoch
+        values = {prefix + k: v.value for k, v in self._values.items()}
+        values[prefix + "loss"] = self._loss.value
+        values[prefix + "epoch"] = self._epoch
         wandb.log(values)
 
         super().clear()
