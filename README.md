@@ -171,13 +171,12 @@ PyTorch Lightning. Given the room layout, the model autoregressively generates
 the next furniture object and optimizes a classification loss for the object
 category together with regression losses for its position, size, and rotation:
 
-$$
+```math
+\begin{aligned}
 \mathcal{L}
-= \mathcal{L}_{\mathrm{CE}}(\mathrm{class})
-+ \lambda_t \mathcal{L}_{\mathrm{reg}}(x, y)
-+ \lambda_s \mathcal{L}_{\mathrm{reg}}(w, l)
-+ \lambda_\theta \mathcal{L}_{\mathrm{reg}}(\theta)
-$$
+&= \mathcal{L}_{\mathrm{CE}}(\mathrm{class})&\quad + \lambda_t \mathcal{L}_{\mathrm{reg}}(x, y)&\quad + \lambda_s \mathcal{L}_{\mathrm{reg}}(w, l)&\quad + \lambda_\theta \mathcal{L}_{\mathrm{reg}}(\theta)
+\end{aligned}
+```
 
 Training uses teacher forcing: at each autoregressive step, the model receives
 the ground-truth objects from the dataset rather than its own previous
