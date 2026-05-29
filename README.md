@@ -25,18 +25,18 @@ The input is a list of parameterized walls. Each wall is represented by the
 two-dimensional coordinates of its endpoints:
 
 $$
-w_j = \left((x_j^{(1)}, y_j^{(1)}), (x_j^{(2)}, y_j^{(2)})\right).
+w_j = \left((x_j^{(1)}, y_j^{(1)}), (x_j^{(2)}, y_j^{(2)})\right)
 $$
 
 The output is a sequence of furniture objects:
 
 $$
-o_i = [\text{class\_id}, x_i, y_i, w_i, l_i, \sin(\theta_i), \cos(\theta_i)].
+o_i = [\mathrm{class\_id}, x_i, y_i, w_i, l_i, \sin(\theta_i), \cos(\theta_i)]
 $$
 
-Here, $\text{class\_id}$ is the furniture category, $(x_i, y_i)$ is the object
-center, $w_i$ and $l_i$ are the object's width and length, and $\theta_i$ is
-the rotation angle.
+Here, $\mathrm{class\_id}$ is the furniture category, $(x_i, y_i)$ is the
+object center, $w_i$ and $l_i$ are the object's width and length, and
+$\theta_i$ is the rotation angle.
 
 ### Data Preprocessing and Encoding
 
@@ -51,19 +51,19 @@ The wall input is therefore encoded in two complementary forms:
 
 - A structured geometric representation:
 
-  $$
-  W = \{w_j\}_{j=1}^{N_w}, \quad
-  w_j = (x_j^{(1)}, y_j^{(1)}, x_j^{(2)}, y_j^{(2)}).
-  $$
+$$
+W = \{w_j\}_{j=1}^{N_w}, \quad
+w_j = (x_j^{(1)}, y_j^{(1)}, x_j^{(2)}, y_j^{(2)})
+$$
 
 - A rasterized occupancy mask:
 
-  $$
-  M \in \{0, 1\}^{H \times W},
-  $$
+$$
+M \in \{0, 1\}^{H \times W}
+$$
 
-  where pixels inside the room boundary are marked as valid placement area and
-  pixels outside the room are masked out.
+where pixels inside the room boundary are marked as valid placement area and
+pixels outside the room are masked out.
 
 During training, every furniture object is encoded as a token containing a
 categorical component and continuous geometric attributes:
@@ -71,9 +71,9 @@ categorical component and continuous geometric attributes:
 $$
 t_i =
 \left[
-\text{onehot}(\text{class\_id}_i),
+\mathrm{onehot}(\mathrm{class\_id}_i),
 x_i, y_i, w_i, l_i, \sin(\theta_i), \cos(\theta_i)
-\right].
+\right]
 $$
 
 The continuous attributes are normalized using statistics computed on the
@@ -89,7 +89,7 @@ rotation angles. The final structured output is converted to the target object
 format:
 
 $$
-o_i = [\text{class\_id}, x_i, y_i, w_i, l_i, \sin(\theta_i), \cos(\theta_i)].
+o_i = [\mathrm{class\_id}, x_i, y_i, w_i, l_i, \sin(\theta_i), \cos(\theta_i)]
 $$
 
 Postprocessing includes removing special tokens, mapping predicted categories to
@@ -173,10 +173,10 @@ category together with regression losses for its position, size, and rotation:
 
 $$
 \mathcal{L}
-= \mathcal{L}_{\text{CE}}(\text{class})
-+ \lambda_t \mathcal{L}_{\text{reg}}(x, y)
-+ \lambda_s \mathcal{L}_{\text{reg}}(w, l)
-+ \lambda_\theta \mathcal{L}_{\text{reg}}(\theta).
+= \mathcal{L}_{\mathrm{CE}}(\mathrm{class})
++ \lambda_t \mathcal{L}_{\mathrm{reg}}(x, y)
++ \lambda_s \mathcal{L}_{\mathrm{reg}}(w, l)
++ \lambda_\theta \mathcal{L}_{\mathrm{reg}}(\theta)
 $$
 
 Training uses teacher forcing: at each autoregressive step, the model receives
@@ -195,7 +195,7 @@ The inference pipeline is:
 1. Receive wall coordinates from the UI or API.
 2. Validate the polygon geometry and reject self-intersecting or incomplete
    room boundaries.
-3. Normalize coordinates and rasterize the room into the layout mask $M$.
+3. Normalize coordinates and rasterize the room into the layout mask `M`.
 4. Load the trained model once at service startup.
 5. Run autoregressive generation until the end token is produced or the maximum
    number of objects is reached.
@@ -305,7 +305,7 @@ The output JSON format contains the room id, generation status, and an `objects`
 array. Each object follows the project vector format:
 
 $$
-o_i = [\text{class\_id}, x_i, y_i, w_i, l_i, \sin(\theta_i), \cos(\theta_i)].
+o_i = [\mathrm{class\_id}, x_i, y_i, w_i, l_i, \sin(\theta_i), \cos(\theta_i)]
 $$
 
 ## Production Preparation

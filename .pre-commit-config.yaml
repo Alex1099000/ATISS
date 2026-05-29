@@ -11,7 +11,7 @@ repos:
     hooks:
       - id: prettier
         types_or: [markdown, yaml]
-        exclude: ^(outputs|checkpoints|\.dvc)/
+        exclude: ^(outputs|checkpoints|\.dvc)/|^README\.md$
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
