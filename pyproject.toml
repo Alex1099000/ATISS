@@ -1,0 +1,88 @@
+[project]
+name = "furniture-layout-generation"
+version = "0.1.0"
+description = "Furniture layout generation with ATISS, Hydra, DVC, MLflow, ONNX, and TensorRT."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "NVIDIA Source Code License" }
+authors = [
+    { name = "Zakhar Kolodiazhnyi" },
+]
+dependencies = [
+    "clean-fid",
+    "cython",
+    "dvc",
+    "fastapi",
+    "fire",
+    "hydra-core",
+    "lightning",
+    "matplotlib",
+    "mlflow",
+    "networkx",
+    "numpy",
+    "onnx",
+    "onnxruntime<1.24",
+    "pillow",
+    "pyyaml",
+    "pyrr",
+    "pytorch-fast-transformers",
+    "scipy",
+    "shapely",
+    "simple-3dviz",
+    "streamlit",
+    "streamlit-drawable-canvas",
+    "torch",
+    "torchvision",
+    "tqdm",
+    "trimesh",
+    "uvicorn",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "ruff",
+]
+export = [
+    "tensorrt",
+]
+
+[project.scripts]
+furniture-layout = "commands:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["commands"]
+
+[tool.setuptools.packages.find]
+include = ["scene_synthesis*", "furniture_layout_generation*"]
+
+[tool.uv]
+no-build-isolation-package = ["pytorch-fast-transformers"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+extend-exclude = [
+    "build",
+    "checkpoints",
+    "outputs",
+    "scene_synthesis.egg-info",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = [
+    "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*.py" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

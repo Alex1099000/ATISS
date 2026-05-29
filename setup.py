@@ -1,15 +1,17 @@
-# 
+#
 # Copyright (C) 2021 NVIDIA Corporation.  All rights reserved.
 # Licensed under the NVIDIA Source Code License.
 # See LICENSE at https://github.com/nv-tlabs/ATISS.
 # Authors: Despoina Paschalidou, Amlan Kar, Maria Shugrina, Karsten Kreis,
 #          Andreas Geiger, Sanja Fidler
-# 
+#
 
 #!/usr/bin/env python
 """Setup for scene_synthesis"""
+
 from itertools import dropwhile
 from os import path
+
 from setuptools import find_packages, setup
 
 
@@ -52,7 +54,7 @@ def get_install_requirements():
         "matplotlib",
         "shapely",
         "simple-3dviz",
-        "scipy"
+        "scipy",
     ]
 
 
@@ -81,8 +83,9 @@ def setup_package():
         ],
         packages=find_packages(exclude=["docs", "scripts"]),
         install_requires=get_install_requirements(),
-        ext_modules=get_extensions()
+        ext_modules=get_extensions(),
     )
+
 
 if __name__ == "__main__":
     setup_package()

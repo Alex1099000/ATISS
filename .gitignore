@@ -9,12 +9,15 @@
 *.snm
 *.bz2
 *pyc
+__pycache__/
 *.swp
 *.so
 *.pdf
 build/
+node_modules/
 
 *.egg-info
+*.egg-info/
 env/
 env3/
 
@@ -27,3 +30,24 @@ output/
 
 checkpoints/*
 outputs/*
+artifacts/
+data/
+plots/
+mlruns/
+.ruff_cache/
+.pytest_cache/
+.venv/
+.env
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.plan
+*.npz
+*.h5
+*.json
+!configs/infer/example_room.json
+!*.dvc
+!.dvc/config
+!.dvc/.gitignore
