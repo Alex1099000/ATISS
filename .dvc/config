@@ -1,0 +1,6 @@
+[core]
+    remote = data
+['remote "data"']
+    url = /workspace-SR006.nfs2/dvc/atiss-data
+['remote "models"']
+    url = /workspace-SR006.nfs2/dvc/atiss-models

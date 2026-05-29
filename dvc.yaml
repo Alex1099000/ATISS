@@ -1,0 +1,30 @@
+stages:
+  preprocess:
+    cmd: python commands.py preprocess
+    deps:
+      - commands.py
+      - scripts/preprocess_data.py
+      - configs/config.yaml
+    outs:
+      - data/processed:
+          persist: true
+
+  train:
+    cmd: python commands.py train train.pull_data=false
+    deps:
+      - commands.py
+      - scripts/train_network_lightning.py
+      - configs/config.yaml
+    outs:
+      - checkpoints:
+          persist: true
+
+  evaluate:
+    cmd: python commands.py evaluate
+    deps:
+      - commands.py
+      - scripts/evaluate_atiss_metrics.py
+      - checkpoints
+    outs:
+      - outputs:
+          persist: true
